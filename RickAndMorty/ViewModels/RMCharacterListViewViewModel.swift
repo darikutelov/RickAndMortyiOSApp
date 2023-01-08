@@ -9,13 +9,15 @@ import UIKit
 
 protocol RMCharacterListViewViewModelDelegate: AnyObject {
     func didLoadInitialCharacters()
+    func didSelectCharacter(_ character: RMCharacter)
 }
 
+/// View Model to handle character list view logic
 final class RMCharacterListViewViewModel: NSObject  {
     
     public weak var delegate: RMCharacterListViewViewModelDelegate?
     
-    private var characters: [RMCaracter] = [] {
+    private var characters: [RMCharacter] = [] {
         didSet {
             for character in characters {
                 let viewModel = RMCharacterCollectionViewCellViewModel(
@@ -30,13 +32,18 @@ final class RMCharacterListViewViewModel: NSObject  {
     
     private var cellViewModels: [RMCharacterCollectionViewCellViewModel] = []
     
+    private var apiInfo: RMGetAllCharactersResponseInfo? = nil
+    
+    /// Fetch initial set of characters (20)
     public func fetchCharacters() {
         RMService.shared.execute(.listCharactersRequest,
                                  expecting: RMGetAllCharactersResponse.self) { [weak self] result in
             switch result {
             case .success(let responseModel):
                 let results = responseModel.results
+                let info = responseModel.info
                 self?.characters = results
+                self?.apiInfo = info
                 // call it on main threat since it updates the view
                 DispatchQueue.main.async {
                     self?.delegate?.didLoadInitialCharacters()
@@ -46,7 +53,21 @@ final class RMCharacterListViewViewModel: NSObject  {
             }
         }
     }
+    
+    /// Pagenate if additional characters are needed
+    public func fetchAdditionalCharacters() {
+        
+    }
+    
+    /// Ath the end would be no next url that means we should not load more characters
+    public var shouldShowLoadMoreIndicator: Bool {
+        return apiInfo?.next != nil
+    }
+    
+    
 }
+
+// MARK: - Collection View
 
 extension RMCharacterListViewViewModel: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -79,4 +100,20 @@ extension RMCharacterListViewViewModel: UICollectionViewDelegate, UICollectionVi
         )
     }
     
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        collectionView.deselectItem(at: indexPath, animated: true)
+        
+        let character = characters[indexPath.row]
+        delegate?.didSelectCharacter(character)
+    }
+}
+
+// MARK: ScrollView
+
+extension RMCharacterListViewViewModel: UIScrollViewDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // math to figure out if at the bottom
+        
+        guard self.shouldShowLoadMoreIndicator else { return }
+    }
 }
