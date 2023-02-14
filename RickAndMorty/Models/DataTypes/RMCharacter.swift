@@ -19,6 +19,6 @@ struct RMCharacter: Codable  {
     let image: String
     let episode: [String]
     let url: String
-    let zcreated: String?
+    let created: String?
   }
 
